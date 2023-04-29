@@ -66,14 +66,38 @@ def delete_location(id):
     if location_index >= 0:
         LOCATIONS.pop(location_index)
 
+# def update_location(id, new_location):
+#     # Iterate the LOCATIONS list, but use enumerate() so that
+#     # you can access the index value of each item.
+#     for index, location in enumerate(LOCATIONS):
+#         if location["id"] == id:
+#             # Found the location. Update the value.
+#             LOCATIONS[index] = new_location
+#             break
+
 def update_location(id, new_location):
-    # Iterate the LOCATIONS list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, location in enumerate(LOCATIONS):
-        if location["id"] == id:
-            # Found the location. Update the value.
-            LOCATIONS[index] = new_location
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Location
+            SET
+                name = ?,
+                address = ?
+        WHERE id = ?
+        """, (new_location['name'], new_location['address'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    # return value of this function
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 def get_all_locations():
     # Open a connection to the database
@@ -105,7 +129,7 @@ def get_all_locations():
             # Note that the database fields are specified in
             # exact order of the parameters defined in the
             # Location class above.
-            location = Location(row['id'], row['name'])
+            location = Location(row['id'], row['name'], row['address'])
 
             locations.append(location.__dict__) # see the notes below for an explanation on this line of code.
 
@@ -131,6 +155,6 @@ def get_single_location(id):
         data = db_cursor.fetchone()
 
         # Create a location instance from the current row
-        location = Location(data['id'], data['name'])
+        location = Location(data['id'], data['name'], data['address'])
 
         return location.__dict__

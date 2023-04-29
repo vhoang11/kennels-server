@@ -69,14 +69,39 @@ def delete_employee(id):
         WHERE id = ?
         """, (id, ))
 
+# def update_employee(id, new_employee):
+#     # Iterate the EMPLOYEES list, but use enumerate() so that
+#     # you can access the index value of each item.
+#     for index, employee in enumerate(EMPLOYEES):
+#         if employee["id"] == id:
+#             # Found the employee. Update the value.
+#             EMPLOYEES[index] = new_employee
+#             break
+
 def update_employee(id, new_employee):
-    # Iterate the EMPLOYEES list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, employee in enumerate(EMPLOYEES):
-        if employee["id"] == id:
-            # Found the employee. Update the value.
-            EMPLOYEES[index] = new_employee
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Employee
+            SET
+                name = ?,
+                address = ?,
+                location_id = ?
+        WHERE id = ?
+        """, (new_employee['name'], new_employee['address'], new_employee['location_id'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    # return value of this function
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 def get_all_employees():
     # Open a connection to the database

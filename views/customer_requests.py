@@ -60,13 +60,28 @@ def delete_customer(id):
         CUSTOMERS.pop(customer_index)
 
 def update_customer(id, new_customer):
-    # Iterate the CUSTOMERS list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, customer in enumerate(CUSTOMERS):
-        if customer["id"] == id:
-            # Found the customer. Update the value.
-            CUSTOMERS[index] = new_customer
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Customer
+            SET
+                name = ?,
+                address = ?
+        WHERE id = ?
+        """, (new_customer['name'], new_customer['address'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    # return value of this function
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 
 def get_all_customers():
@@ -81,7 +96,7 @@ def get_all_customers():
         db_cursor.execute("""
         SELECT
             a.id,
-            a.name
+            a.name,
             a.address
         FROM customer a
         """)
