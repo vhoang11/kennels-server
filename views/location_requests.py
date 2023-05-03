@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from models import Location
+from models import Location, Employee, Animal
 
 LOCATIONS = [
     {
@@ -66,14 +66,38 @@ def delete_location(id):
     if location_index >= 0:
         LOCATIONS.pop(location_index)
 
+# def update_location(id, new_location):
+#     # Iterate the LOCATIONS list, but use enumerate() so that
+#     # you can access the index value of each item.
+#     for index, location in enumerate(LOCATIONS):
+#         if location["id"] == id:
+#             # Found the location. Update the value.
+#             LOCATIONS[index] = new_location
+#             break
+
 def update_location(id, new_location):
-    # Iterate the LOCATIONS list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, location in enumerate(LOCATIONS):
-        if location["id"] == id:
-            # Found the location. Update the value.
-            LOCATIONS[index] = new_location
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Location
+            SET
+                name = ?,
+                address = ?
+        WHERE id = ?
+        """, (new_location['name'], new_location['address'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    # return value of this function
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 def get_all_locations():
     # Open a connection to the database
@@ -86,10 +110,10 @@ def get_all_locations():
         # Write the SQL query to get the information you want
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address
-        FROM location a
+            l.id,
+            l.name,
+            l.address
+        FROM location l
         """)
 
         # Initialize an empty list to hold all animal representations
@@ -105,8 +129,16 @@ def get_all_locations():
             # Note that the database fields are specified in
             # exact order of the parameters defined in the
             # Location class above.
-            location = Location(row['id'], row['name'])
+            location = Location(row['id'], row['name'], row['address'])
 
+            employee = Employee(row['employee_name'], row['employee_address'], row['employee_location_id'])
+            
+            animal = Animal(row['animal_name'], row['animal_breed'], row['animal_status'], row['animal_location_id'], row['animal_customer_id'])
+            
+            location.employee = employee.__dict__
+            
+            location.animal = animal.__dict__
+            
             locations.append(location.__dict__) # see the notes below for an explanation on this line of code.
 
     return locations
@@ -120,17 +152,40 @@ def get_single_location(id):
         # into the SQL statement.
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address
-        FROM location a
-        WHERE a.id = ?
+            l.id,
+            l.name,
+            l.address,
+            e.name employee_name,
+            e.address employee_address,
+            e.location_id employee_location_id,
+            a.name animal_name,
+            a.breed animal_breed,
+            a.status animal_status,
+            a.location_id animal_location_id,
+            a.customer_id animal_customer_id
+        FROM location l
+        JOIN employee e
+            ON l.id = e.location_id
+        JOIN animal a
+            ON l.id = a.location_id 
+        WHERE l.id = ?
         """, ( id, ))
 
+        locations = []
+        
         # Load the single result into memory
         data = db_cursor.fetchone()
 
         # Create a location instance from the current row
-        location = Location(data['id'], data['name'])
+        location = Location(data['id'], data['name'], data['address'])
+        
+        employee = Employee(data['employee_name'], data['employee_address'], data['employee_location_id'])
+        
+        animal = Animal(data['animal_name'], data['animal_breed'], data['animal_status'], data['animal_location_id'], data['animal_customer_id'])
+        
+        location.employee = employee.__dict__
+        location.animal = animal.__dict__
+        
+        locations.append(employee.__dict__)
 
         return location.__dict__

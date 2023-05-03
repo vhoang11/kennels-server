@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from models import Employee
+from models import Employee, Location
 
 EMPLOYEES = [
     {
@@ -69,14 +69,39 @@ def delete_employee(id):
         WHERE id = ?
         """, (id, ))
 
+# def update_employee(id, new_employee):
+#     # Iterate the EMPLOYEES list, but use enumerate() so that
+#     # you can access the index value of each item.
+#     for index, employee in enumerate(EMPLOYEES):
+#         if employee["id"] == id:
+#             # Found the employee. Update the value.
+#             EMPLOYEES[index] = new_employee
+#             break
+
 def update_employee(id, new_employee):
-    # Iterate the EMPLOYEES list, but use enumerate() so that
-    # you can access the index value of each item.
-    for index, employee in enumerate(EMPLOYEES):
-        if employee["id"] == id:
-            # Found the employee. Update the value.
-            EMPLOYEES[index] = new_employee
-            break
+    with sqlite3.connect("./kennel.sqlite3") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        UPDATE Employee
+            SET
+                name = ?,
+                address = ?,
+                location_id = ?
+        WHERE id = ?
+        """, (new_employee['name'], new_employee['address'], new_employee['location_id'], id, ))
+
+        # Were any rows affected?
+        # Did the client send an `id` that exists?
+        rows_affected = db_cursor.rowcount
+
+    # return value of this function
+    if rows_affected == 0:
+        # Forces 404 response by main module
+        return False
+    else:
+        # Forces 204 response by main module
+        return True
 
 def get_all_employees():
     # Open a connection to the database
@@ -89,11 +114,15 @@ def get_all_employees():
         # Write the SQL query to get the information you want
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address,
-            a.location_id
-        FROM employee a
+            e.id,
+            e.name,
+            e.address,
+            e.location_id,
+            l.name location_name,
+            l.address location_address
+        FROM employee e
+        JOIN location l
+            ON l.id = a.location_id
         """)
 
         # Initialize an empty list to hold all animal representations
@@ -111,6 +140,12 @@ def get_all_employees():
             # Employee class above.
             employee = Employee(row['id'], row['name'], row['address'], row['location_id'])
 
+            location = Location(row['id'], row['location_name'], row['location_address'])
+            # Create a Location instance from the current row
+
+            employee.location = location.__dict__
+            # Add the dictionary representation of the location to the animal
+
             employees.append(employee.__dict__) # see the notes below for an explanation on this line of code.
 
     return employees
@@ -124,11 +159,11 @@ def get_single_employee(id):
         # into the SQL statement.
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address,
-            a.location_id
-        FROM employee a
+            e.id,
+            e.name,
+            e.address,
+            e.location_id
+        FROM employee e
         WHERE a.id = ?
         """, ( id, ))
 
