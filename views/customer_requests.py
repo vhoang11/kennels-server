@@ -95,10 +95,10 @@ def get_all_customers():
         # Write the SQL query to get the information you want
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address
-        FROM customer a
+            c.id,
+            c.name,
+            c.address
+        FROM customer c
         """)
 
         # Initialize an empty list to hold all animal representations
@@ -129,10 +129,10 @@ def get_single_customer(id):
         # into the SQL statement.
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address
-        FROM customer a
+            c.id,
+            c.name,
+            c.address
+        FROM customer c
         WHERE a.id = ?
         """, ( id, ))
 
